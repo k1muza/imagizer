@@ -15,7 +15,6 @@ app = FastAPI()
 # Connection to Redis
 redis = aioredis.from_url("redis://localhost:6379")
 
-
 async def fetch_image(url: str) -> Image.Image:
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
@@ -24,9 +23,8 @@ async def fetch_image(url: str) -> Image.Image:
             image_data = await response.read()
             return Image.open(BytesIO(image_data))
         
-
 @app.get("/{width}/{height}/{image_url:path}")
-async def resize_image(request: Request, width: int, height: int, image_url: str, strategy: str = "aspect_ratio_match"):
+async def resize_image(request: Request, width: int, height: int, image_url: str, strategy: str = "thumbnail"):
 
     # Supported resizing strategies
     strategies = {
@@ -55,13 +53,12 @@ async def resize_image(request: Request, width: int, height: int, image_url: str
     if cached_image:
         return Response(content=cached_image, media_type=content_type)
 
-    # Use WebP format if supported, otherwise use the original format
-
     # Fetch and resize the image if not cached
     original_image = await fetch_image(image_url)
+    # Use WebP format if supported, otherwise use the original format
     output_format = "WEBP" if supports_webp else original_image.format
 
-    # Use the AspectRatioMatchStrategy
+    # Resize the image
     processor = ImageProcessor(strategies[strategy])
     processed_image = processor.process(original_image, width, height)
     
